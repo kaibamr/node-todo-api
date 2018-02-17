@@ -250,3 +250,50 @@ describe('POST /users', () => {
             .end(done);
     });
 });
+
+
+describe('POST /users/login', () => {
+    it('should login user and return new auth token', (done) => {
+        const email = users[1].email;
+        const password = users[1].password;
+        request(app)
+            .post('/users/login')
+            .send({ email, password })
+            .expect(200)
+            .expect((res) => {
+                expect(res.headers['x-auth']).to.exist;
+            })
+            .end((err, res) => {
+                if (err) return done(err);
+
+                User.findOne(users[1]._id).then((user) => {
+                    expect(user.tokens[0].token).to.equal(res.headers['x-auth'])
+                    done();
+                }, (err) => {
+                    done(err);
+                });
+            });
+    });
+
+    it('should reject if invalid login', (done) => {
+        const email = users[1].email;
+        const password = users[1].password + 1;
+        request(app)
+            .post('/users/login')
+            .send({ email, password })
+            .expect(400)
+            .expect((res) => {
+                expect(res.headers['x-auth']).to.not.exist;
+            })
+            .end((err, res) => {
+                if (err) return done(err);
+
+                User.findOne(users[1]._id).then((user) => {
+                    expect(user.tokens.length).to.equal(0)
+                    done();
+                }, (err) => {
+                    done(err);
+                });
+            });       
+    });
+});
